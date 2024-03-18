@@ -1,0 +1,109 @@
+initialize_board() {
+    for ((i=0; i<rows; i++)); do
+        for ((j=0; j<columns; j++)); do
+            board[$i,$j]="."
+        done
+    done
+}
+# Game board
+print_board() {
+    local board_str=""
+    for ((i=0; i<rows; i++)); do
+        for ((j=0; j<columns; j++)); do
+            board_str+="| ${board[$i,$j]} "
+        done
+        board_str+="|\n"
+    done
+    zenity --info --title="Connect 4" --text="$board_str" --width=200 --height=150
+}
+# Function to check if a column is full
+column_full() {
+    local col=$1
+    if [[ ${board[0,$col]} == "." ]]; then
+        return 1
+    else
+        return 0
+    fi
+}
+# Function to drop a piece into a column
+drop_piece() {
+    local col=$1
+    local symbol=$2
+    for ((i=rows-1; i>=0; i--)); do
+        if [[ ${board[$i,$col]} == "." ]]; then
+            board[$i,$col]=$symbol
+            break
+        fi
+    done
+}
+# Function to check if there's a winning combination
+check_win() {
+    local symbol=$1
+    # Check horizontally
+    for ((i=0; i<rows; i++)); do
+        for ((j=0; j<=columns-4; j++)); do
+            if [[ ${board[$i,$j]} == "$symbol" && ${board[$i,$((j+1))]} == "$symbol" && ${board[$i,$((j+2))]} == "$symbol" && ${board[$i,$((j+3))]} == "$symbol" ]]; then
+                return 0
+            fi
+        done
+    done
+    # Check vertically
+    for ((j=0; j<columns; j++)); do
+        for ((i=0; i<=rows-4; i++)); do
+            if [[ ${board[$i,$j]} == "$symbol" && ${board[$((i+1)),$j]} == "$symbol" && ${board[$((i+2)),$j]} == "$symbol" && ${board[$((i+3)),$j]} == "$symbol" ]]; then
+                return 0
+            fi
+        done
+    done
+    # Check diagonally
+    for((i=0; i<=rows-4; i++)); do
+        for ((j=0; j<=columns-4; j++)); do
+            if [[ ${board[$i,$j]} == "$symbol" && ${board[$((i+1)),$((j+1))]} == "$symbol" && ${board[$((i+2)),$((j+2))]} == "$symbol" && ${board[$((i+3)),$((j+3))]} == "$symbol" ]]; then
+                return 0
+            fi
+        done
+    done
+    # Check anti-diagonally
+    for ((i=0; i<=rows-4; i++)); do
+        for ((j=3; j<columns; j++)); do
+            if [[ ${board[$i,$j]} == "$symbol" && ${board[$((i+1)),$((j-1))]} == "$symbol" && ${board[$((i+2)),$((j-2))]} == "$symbol" && ${board[$((i+3)),$((j-3))]} == "$symbol" ]]; then
+                return 0
+            fi
+        done
+    done
+    return 1
+}
+# Main game function
+connect4() {
+    rows=6
+    columns=7
+    declare -A board
+    initialize_board
+    player="X"
+
+    while true; do
+        print_board
+        column=$(zenity --entry --title="Player $player's turn" --text="Enter column (1-$columns) to drop $player:" --entry-text "")
+        if [[ $column =~ ^[1-7]$ ]]; then
+            if column_full $((column-1)); then
+                zenity --info --title="Column Full" --text="Column $column is full! Choose another column." --width=200
+            else
+                drop_piece $((column-1)) $player
+                if check_win $player; then
+                    print_board
+                    zenity --info --title="Game Over" --text="Player $player wins!" --width=200
+                    break
+                fi
+                if [[ $player == "X" ]]; then
+                    player="O"
+                else
+                    player="X"
+                fi
+            fi
+        else
+            zenity --info --title="Invalid Column" --text="Invalid column! Please enter a number between 1 and $columns." --width=200
+        fi
+    done
+}
+# Start the game
+connect4
